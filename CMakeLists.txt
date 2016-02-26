@@ -41,5 +41,35 @@ ELSE(CUDA_FOUND)
   message( FATAL_ERROR "Could not find CUDA >= 7.0" )
 ENDIF(CUDA_FOUND)
 
-add_subdirectory(popsift)
+# Create a dist directory as the default installation folder
+SET(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR}/dist)
 
+add_subdirectory(popsift)
+add_subdirectory(popsift/application)
+
+export(TARGETS popsift
+  FILE "${PROJECT_BINARY_DIR}/popsiftTargets.cmake")
+
+# Adds configuration files to use with external find_package
+set(CONF_INCLUDE_DIRS "${CMAKE_INSTALL_PREFIX}/include" "${CUDA_INCLUDE_DIRS}" "${CMAKE_SOURCE_DIR}/popsift/Cuda-7.0-cub")
+set(CONF_LIBRARIES "${CMAKE_INSTALL_PREFIX}/lib/libpopsift.a")
+configure_file(cmake/popsiftConfig.cmake.in
+  "${PROJECT_BINARY_DIR}/popsiftConfig.cmake" @ONLY)
+
+set(POPSIFT_MAJOR_VERSION 0)
+set(POPSIFT_MINOR_VERSION 1)
+set(POPSIFT_PATCH_VERSION 0)
+set(POPSIFT_VERSION
+  ${POPSIFT_MAJOR_VERSION}.${POPSIFT_MINOR_VERSION}.${POPSIFT_PATCH_VERSION})
+
+configure_file(cmake/popsiftConfigVersion.cmake.in
+  "${PROJECT_BINARY_DIR}/popsiftConfigVersion.cmake" @ONLY)
+install(FILES 
+    "${PROJECT_BINARY_DIR}/popsiftConfig.cmake" 
+    "${PROJECT_BINARY_DIR}/popsiftConfigVersion.cmake"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/share/popsift" 
+    COMPONENT dev)
+
+install(EXPORT popsiftTargets 
+        DESTINATION "${CMAKE_INSTALL_PREFIX}/share/popsift" 
+        COMPONENT dev)

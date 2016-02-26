@@ -9,3 +9,4 @@ target_link_libraries( sift_v4 popsift
                                ${CUDA_LIBRARIES}
 			       ${CUDA_CUDADEVRT_LIBRARY} ) 
 
+install(TARGETS sift_v4 DESTINATION bin)
