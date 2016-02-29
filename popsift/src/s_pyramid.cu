@@ -824,5 +824,25 @@ void Pyramid::find_extrema( float edgeLimit, float threshold )
     descriptors_v1( );
 }
 
+void Pyramid::Octave::downloadToVector(uint32_t level, std::vector<ExtremumCandidate> &candidates, std::vector<Descriptor> &descriptors)
+{
+
+    readExtremaCount( ); // CHECK
+    cudaDeviceSynchronize( );
+    uint32_t ct = getExtremaCount( level );
+    if( ct > 0 ) {
+        candidates.resize(ct);        
+        POP_CUDA_MEMCPY( &candidates[0],
+                            _d_extrema[level],
+                            ct * sizeof(ExtremumCandidate),
+                            cudaMemcpyDeviceToHost );
+        descriptors.resize(ct);        
+        POP_CUDA_MEMCPY( &descriptors[0],
+                        _d_desc[level],
+                        ct * sizeof(Descriptor),
+                        cudaMemcpyDeviceToHost );
+    }
+}
+
 } // namespace popart
 

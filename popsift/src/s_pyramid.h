@@ -157,7 +157,7 @@ public:
         inline ExtremumCandidate* getExtrema( uint32_t level ) {
             return _d_extrema[level];
         }
-
+    
         void resetExtremaCount( );
         void readExtremaCount( );
         uint32_t getExtremaCount( ) const;
@@ -167,6 +167,8 @@ public:
         Descriptor* getDescriptors( uint32_t level );
         void        downloadDescriptor( );
         void        writeDescriptor( ostream& ostr );
+
+        void downloadToVector(uint32_t level, std::vector<ExtremumCandidate> &, std::vector<Descriptor> &);
 
         /**
          * alloc() - allocates all GPU memories for one octave
