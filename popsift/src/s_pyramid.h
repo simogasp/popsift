@@ -2,6 +2,7 @@
 
 #include "s_image.h"
 #include "keep_time.h"
+#include <vector>
 
 #ifndef INF
 #define INF               (1<<29)
@@ -65,6 +66,7 @@ struct Descriptor
 
 class Pyramid
 {
+public:
     class Octave
     {
         uint32_t  _levels;
@@ -183,7 +185,7 @@ class Pyramid
         void allocExtrema( uint32_t layer_max_extrema );
         void freeExtrema( );
     };
-
+private:
     uint32_t     _num_octaves;
     uint32_t     _levels;
     Octave*      _octaves;
@@ -203,6 +205,8 @@ public:
     void download_and_save_descriptors( const char* basename, uint32_t octave );
 
     void report_times();
+
+    inline Octave & octave(size_t n){ return _octaves[n]; }
 
 private:
     void build_v7  ( Image* base );

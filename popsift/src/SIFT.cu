@@ -132,19 +132,23 @@ void PopSift::execute( imgStream inp )
     _pyramid->find_extrema( _edgeLimit, _threshold );
     _extremaTime->stop();
 
-    if( log_to_file ) {
-        popart::write_plane2D( "upscaled-input-image.pgm",
-                               true, // is stored on device
-                               _baseImg->array );
-
-        for( int o=0; o<_octaves; o++ ) {
-            for( int s=0; s<_scales+3; s++ ) {
-                _pyramid->download_and_save_array( "pyramid", o, s );
-            }
-        }
-        for( int o=0; o<_octaves; o++ ) {
-            _pyramid->download_and_save_descriptors( "pyramid", o );
-        }
-    }
 }
+
+void PopSift::log_to_file()
+{
+  popart::write_plane2D( "upscaled-input-image.pgm",
+                         true, // is stored on device
+                         _baseImg->array );
+
+  for( int o=0; o<_octaves; o++ ) {
+      for( int s=0; s<_scales+3; s++ ) {
+          _pyramid->download_and_save_array( "pyramid", o, s );
+      }
+  }
+  for( int o=0; o<_octaves; o++ ) {
+      _pyramid->download_and_save_descriptors( "pyramid", o );
+  }
+}
+
+
 

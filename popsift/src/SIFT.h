@@ -34,7 +34,6 @@
 
 /* user parameters */
 extern int verbose;
-extern int log_to_file;
 
 class PopSift
 {
@@ -55,7 +54,8 @@ public:
     void init( int w, int h );
 
     void execute( imgStream _inp );
-
+    popart::Pyramid & pyramid() { return *_pyramid; };
+    void log_to_file();
     void uninit( );
 
 private:
