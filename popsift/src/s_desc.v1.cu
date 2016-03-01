@@ -27,8 +27,6 @@ void keypoint_descriptors( ExtremumCandidate* cand,
 
     ExtremumCandidate* ext = &cand[blockIdx.x];
 
-    if( ext->not_a_keypoint ) return;
-
     float x    = ext->xpos;
     float y    = ext->ypos;
     float sig  = ext->sigma;
@@ -185,6 +183,8 @@ void normalize_histogram( Descriptor* descs )
 __host__
 void Pyramid::descriptors_v1( )
 {
+    // cerr << "Enter " << __FUNCTION__ << endl;
+
     _keep_time_descr_v1.start();
     for( int octave=0; octave<_num_octaves; octave++ ) {
         // async copy of extrema from device to host
@@ -227,6 +227,8 @@ void Pyramid::descriptors_v1( )
         }
     }
     _keep_time_descr_v1.stop();
+
+    // cerr << "Leave " << __FUNCTION__ << endl;
 }
 
 #undef DESCR_BINS_V1

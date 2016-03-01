@@ -31,12 +31,14 @@
 #define PYRAMID_V11_ON true
 #define PYRAMID_V12_ON false
 
-#define EXTREMA_NO_CUB true
-#define EXTREMA_CUB    false
+
+#define EXTREMA_V4 false //no cub
+#define EXTREMA_V5 false // with cub
+#define EXTREMA_V6 true // array?
 
 #define EXTREMA_V4_ON true
-#define ORIENTA_V1_ON false
-#define ORIENTA_V2_ON true
+#define ORIENTA_V1_ON true
+#define ORIENTA_V2_ON false
 
 using namespace std;
 
@@ -139,7 +141,7 @@ void Pyramid::Octave::allocExtrema( uint32_t layer_max_extrema )
 {
     ExtremaMgmt*       mgmt;
 
-    _d_extrema = new ExtremumCandidate*[ _levels ];
+    _d_extrema        = new ExtremumCandidate*[ _levels ];
 
     POP_CUDA_MALLOC_HOST( &mgmt, _levels * sizeof(ExtremaMgmt) );
     memset( mgmt, 0, _levels * sizeof(ExtremaMgmt) );
@@ -175,8 +177,8 @@ void Pyramid::Octave::freeExtrema( )
 {
     for( uint32_t i=0; i<_levels; i++ ) {
         if( _h_desc    && _h_desc[i] )    cudaFreeHost( _h_desc[i] );
-        if( _d_desc    && _d_desc[i] )    cudaFree(     _d_desc[i] );
-        if( _d_extrema && _d_extrema[i] ) cudaFree(     _d_extrema[i] );
+        if( _d_desc    && _d_desc[i] )    cudaFree( _d_desc[i] );
+        if( _d_extrema && _d_extrema[i] ) cudaFree( _d_extrema[i] );
     }
     cudaFree( _d_extrema_mgmt );
     cudaFreeHost( _h_extrema_mgmt );
@@ -507,8 +509,9 @@ void Pyramid::Octave::download_and_save_array( const char* basename, uint32_t oc
             int width  = getData(level).getWidth();
             int height = getData(level).getHeight();
 
-            Plane2D_uint8 hostPlane_c;
-            hostPlane_c.allocHost( width, height, popart::Unaligned );
+            Plane2D_float hostPlane_f;
+            hostPlane_f.allocHost( width, height, CudaAllocated );
+            hostPlane_f.memcpyFromDevice( getData(level) );
 
             uint32_t total_ct = 0;
 
@@ -528,9 +531,10 @@ void Pyramid::Octave::download_and_save_array( const char* basename, uint32_t oc
                     for( uint32_t i=0; i<ct; i++ ) {
                         int32_t x = roundf( cand[i].xpos );
                         int32_t y = roundf( cand[i].ypos );
+                        // cerr << "(" << x << "," << y << ") scale " << cand[i].sigma << " orient " << cand[i].angle_from_bemap << endl;
                         for( int32_t j=-4; j<=4; j++ ) {
-                            hostPlane_c.ptr( clamp(y+j,height) )[ clamp(x,  width) ] = 255;
-                            hostPlane_c.ptr( clamp(y,  height) )[ clamp(x+j,width) ] = 255;
+                            hostPlane_f.ptr( clamp(y+j,height) )[ clamp(x,  width) ] = 255;
+                            hostPlane_f.ptr( clamp(y,  height) )[ clamp(x+j,width) ] = 255;
                         }
                     }
 
@@ -543,8 +547,10 @@ void Pyramid::Octave::download_and_save_array( const char* basename, uint32_t oc
                     mkdir("dir-feat", 0700);
                 }
 
+
                 ostringstream ostr;
                 ostr << "dir-feat/" << basename << "-o-" << octave << "-l-" << level << ".pgm";
+        #if 0
                 ofstream of( ostr.str().c_str() );
                 cerr << "Writing " << ostr.str() << endl;
                 of << "P5" << endl
@@ -552,9 +558,12 @@ void Pyramid::Octave::download_and_save_array( const char* basename, uint32_t oc
                    << "255" << endl;
                 of.write( (char*)hostPlane_c.data, hostPlane_c.getByteSize() );
                 of.close();
+        #endif
+
+                popart::write_plane2D( ostr.str().c_str(), false, hostPlane_f );
             }
 
-            hostPlane_c.freeHost( popart::Unaligned );
+            hostPlane_f.freeHost( CudaAllocated );
         }
     }
 #endif
@@ -616,6 +625,7 @@ Pyramid::Pyramid( Image* base, uint32_t octaves, uint32_t levels )
     , _levels( levels + 3 )
     , _keep_time_extrema_v4( 0 )
     , _keep_time_extrema_v5( 0 )
+    , _keep_time_extrema_v6( 0 )
     , _keep_time_orient_v1(  0 )
     , _keep_time_orient_v2(  0 )
     , _keep_time_descr_v1(   0 )
@@ -630,6 +640,7 @@ Pyramid::Pyramid( Image* base, uint32_t octaves, uint32_t levels )
 #if (PYRAMID_PRINT_DEBUG==1)
         printf("Allocating octave %u with width %u and height %u (%u levels)\n", o, w, h, _levels );
 #endif // (PYRAMID_PRINT_DEBUG==1)
+        _octaves[o].debugSetOctave( o );
         _octaves[o].alloc( w, h, _levels, 10000 );
         w = ceilf( w / 2.0f );
         h = ceilf( h / 2.0f );
@@ -803,15 +814,22 @@ void Pyramid::find_extrema( float edgeLimit, float threshold )
     POP_CUDA_FATAL_TEST( err, "event destroy failed: " );
 
 #else // not EXTREMA_SPEED_TEST
-    if( EXTREMA_NO_CUB ) {
+    if( EXTREMA_V4 ) {
         reset_extremum_counter();
         find_extrema_v4( edgeLimit, threshold );
     }
 
-    if( EXTREMA_CUB ) {
+    if( EXTREMA_V5 ) {
         reset_extremum_counter();
         find_extrema_v5( edgeLimit, threshold );
     }
+
+    if(EXTREMA_V6){
+        reset_extremum_counter();
+        find_extrema_v6( edgeLimit, threshold );
+    }
+
+
 #endif // not EXTREMA_SPEED_TEST
 
     for( int o=0; o<_num_octaves; o++ ) {
