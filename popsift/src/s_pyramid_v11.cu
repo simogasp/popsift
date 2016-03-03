@@ -139,6 +139,9 @@ void filter_gauss_horiz_v11_by_2( cudaTextureObject_t src_data,
     dst_data.ptr(idy)[idx] = out;
 }
 
+#if 0 // this if 0 is used to suppress the following compilation error: 
+      // error: no instance of overloaded function "tex2D" matches the argument list 
+      // downscale_by_2 doesn't seem to be used 
     //input texture (src_data) has twize the size of dst_data.
     //the block and thread dimensions are that of dst_data.
 __global__
@@ -161,8 +164,8 @@ void downscale_by_2(Plane2D_float src_data,
     dst_data.ptr(idy)[idx] = tex2D<float>( src_data,
                                            2 * ( block_x + idx ) /*+ 0.5f*/,
                                            2 * ( block_y + idy )/* + 0.5f */);
-    */
 }
+#endif
 
 __device__ inline
 float filter_gauss_vert_v11_sub( cudaTextureObject_t src_data,
