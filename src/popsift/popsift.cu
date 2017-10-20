@@ -15,6 +15,7 @@
 #include "sift_pyramid.h"
 #include "sift_extremum.h"
 #include "common/assist.h"
+#include "reg_features.h"
 
 using namespace std;
 
@@ -27,10 +28,23 @@ PopSift::PopSift( const popsift::Config& config, popsift::Config::ProcessingMode
     configure( config, true );
 
     _pipe._thread_stage1 = new boost::thread( &PopSift::uploadImages, this );
-    if( mode == popsift::Config::ExtractingMode )
+
+    switch( mode )
+    {
+    case popsift::Config::ExtractingMode :
         _pipe._thread_stage2 = new boost::thread( &PopSift::extractDownloadLoop, this );
-    else
+	break;
+    case popsift::Config::MatchingMode :
         _pipe._thread_stage2 = new boost::thread( &PopSift::matchPrepareLoop, this );
+	break;
+    case popsift::Config::RegistrationMode :
+        _pipe._thread_stage2 = new boost::thread( &PopSift::registrationPrepareLoop, this );
+	break;
+    default :
+        cerr << __FILE__ << ":" << __LINE__ << " Unkown mode for image process job. Assuming feature extractio." << endl;
+        _pipe._thread_stage2 = new boost::thread( &PopSift::extractDownloadLoop, this );
+	break;
+    }
 }
 
 PopSift::PopSift( )
@@ -195,6 +209,31 @@ void PopSift::matchPrepareLoop( )
         p._pyramid->step2( _config );
 
         popsift::DeviceFeatures* features = p._pyramid->clone_device_descriptors( _config );
+
+        cudaDeviceSynchronize();
+
+        job->setFeatures( features );
+    }
+}
+
+void PopSift::registrationPrepareLoop( )
+{
+    Pipe& p = _pipe;
+
+    SiftJob* job;
+    while( ( job = p._queue_stage2.pull() ) != 0 ) {
+        popsift::Image* img = job->getImg();
+
+        private_init( img->getWidth(), img->getHeight() );
+
+        p._pyramid->step1( _config, img );
+        // uploaded input image is still needed
+
+        p._pyramid->step2( _config );
+
+        popsift::RegFeatures* features = p._pyramid->clone_device_descriptors_and_image( _config, img );
+
+        p._unused.push( img ); // uploaded input image no longer needed, release for reuse
 
         cudaDeviceSynchronize();
 

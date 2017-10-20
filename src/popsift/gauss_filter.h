@@ -74,6 +74,14 @@ struct GaussInfo
      */
     GaussTable<MAX_OCTAVES> dd;
 
+    /* For a Gauss table with an arbitrary sigma (< 2) that the user may
+     * want to apply to an input image.
+     * Requires a separate initialization call.
+     * Note that the user Gauss table works only for the "relative" kernels
+     * that user the hardware interpolation kernel.
+     */
+    GaussTable<1> user;
+
     __host__
     void clearTables( );
 
@@ -111,6 +119,14 @@ extern                         GaussInfo h_gauss;
 void init_filter( const Config& conf,
                   float         sigma0,
                   int           levels );
+
+/* pre_init_user_filter is only needed if the separate "user" Gauss
+ * filter is requried.
+ * If it is needed, pre_init_user_filter must be called before
+ * init_filter.
+ */
+void pre_init_user_filter( const Config& conf,
+                           float         sigma );
 
 } // namespace popsift
 

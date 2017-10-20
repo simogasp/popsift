@@ -19,6 +19,8 @@
 
 namespace popsift {
 
+class RegFeatures;
+
 struct ExtremaCounters
 {
     /* The number of extrema found per octave */
@@ -97,6 +99,10 @@ public:
     /** step 3 (alternative): make copy of descriptors on device side */
     DeviceFeatures* clone_device_descriptors( const Config& conf );
 
+    /** step 3 (alternative): make copy of descriptors and smoothed input
+     *                        image on device side */
+    RegFeatures*    clone_device_descriptors_and_image( const Config& conf, Image* img );
+
     void download_and_save_array( const char* basename );
 
     void save_descriptors( const Config& conf, HostFeatures* features, const char* basename );
@@ -107,6 +113,13 @@ public:
     inline Octave& getOctave(const int o){ return _octaves[o]; }
 
 private:
+    inline void horiz_from_input_image_with_user_gauss_table( const Config&       conf,
+                                                              Image*              base,
+							      cudaSurfaceObject_t surf,
+							      const int           width,
+							      const int           height,
+							      cudaStream_t        stream,
+							      Config::SiftMode    mode );
     inline void horiz_from_input_image( const Config&    conf,
                                         Image*           base,
 					int              octave,
@@ -139,6 +152,8 @@ private:
     int* getNumberOfBlocks( int octave );
     void writeDescriptor( const Config& conf, std::ostream& ostr, HostFeatures* features, bool really, bool with_orientation );
 
+    /** helper function for clone_device_descriptors and for
+     *  clone_device_descriptors_and_input */
     void clone_device_descriptors_sub( const Config& conf, DeviceFeatures* features );
 
 private:

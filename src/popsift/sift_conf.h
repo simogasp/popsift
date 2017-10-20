@@ -73,7 +73,8 @@ struct Config
      */
     enum ProcessingMode {
         ExtractingMode,
-        MatchingMode
+        MatchingMode,
+        RegistrationMode
     };
 
     void setGaussMode( const std::string& m );

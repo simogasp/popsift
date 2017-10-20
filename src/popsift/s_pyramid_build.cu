@@ -118,6 +118,36 @@ inline void Pyramid::horiz_from_input_image( const Config& conf, Image* base, in
           shift );
 }
 
+__host__
+inline void Pyramid::horiz_from_input_image_with_user_gauss_table(
+    const Config&       conf,
+    Image*              base,
+    cudaSurfaceObject_t surf,
+    const int           width,
+    const int           height,
+    cudaStream_t        stream,
+    Config::SiftMode    mode )
+{
+    dim3 block( 128, 1 );
+    dim3 grid;
+    grid.x  = grid_divide( width,  128 );
+    grid.y  = height;
+
+    float shift  = 0.5f;
+
+    if( mode == Config::PopSift || mode == Config::VLFeat ) {
+        shift  = 0.5f * powf( 2.0f, conf.getUpscaleFactor() );
+    }
+
+    gauss::relativeSource::horiz_with_user_gauss_table
+        <<<grid,block,0,stream>>>
+        ( base->getInputTexture(),
+          surf,
+	  width,
+	  height,
+          shift );
+}
+
 
 __host__
 inline void Pyramid::downscale_from_prev_octave( int octave, cudaStream_t stream, Config::SiftMode mode )

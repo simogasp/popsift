@@ -118,6 +118,10 @@ private:
     /* Worker function: Extract SIFT features, clone results in device memory */
     void matchPrepareLoop( );
 
+    /* Worker function: Extract SIFT features, clone results in device memory, and clone
+       smoothed input image */
+    void registrationPrepareLoop( );
+
 private:
     Pipe            _pipe;
     popsift::Config _config;
