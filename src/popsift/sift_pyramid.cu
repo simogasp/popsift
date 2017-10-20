@@ -21,6 +21,7 @@
 #include "sift_extremum.h"
 #include "common/debug_macros.h"
 #include "common/assist.h"
+#include "reg_features.h"
 
 #ifdef USE_NVTX
 #include <nvToolsExtCuda.h>
@@ -346,6 +347,23 @@ FeaturesDev* Pyramid::clone_device_descriptors( const Config& conf )
     FeaturesDev* features = new FeaturesDev( hct.ext_total, hct.ori_total );
 
     clone_device_descriptors_sub( conf, features );
+
+    cudaStreamSynchronize( _download_stream );
+
+    return features;
+}
+
+RegFeatures* Pyramid::clone_device_descriptors_and_image( const Config& conf, popsift::Image* img )
+{
+    readDescCountersFromDevice();
+
+    RegFeatures* features = new RegFeatures( hct.ext_total, hct.ori_total );
+
+    clone_device_descriptors_sub( conf, features );
+
+    // cudaMallocArray( img.getWidth(), img.getHeight() );
+    // cudaSurfaceCreate
+    // makeGauss
 
     cudaStreamSynchronize( _download_stream );
 

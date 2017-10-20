@@ -289,6 +289,25 @@ void init_filter( const Config& conf,
 }
 
 __host__
+void pre_init_user_filter( const Config& conf,
+                           float         sigma )
+{
+    /* user:
+     * a relative filter made for reaching a desired sigma
+     * Table must be used for relative filters.
+     */
+    if( not conf.hasInitialBlur() ) {
+        h_gauss.user.sigma[0] = sigma;
+    } else {
+        const float initial_blur = conf.getInitialBlur() * pow( 2.0f, conf.getUpscaleFactor() );
+        h_gauss.user.sigma[0] = sqrt( fabsf( sigma * sigma - initial_blur * initial_blur ) );
+    }
+
+    h_gauss.user.computeBlurTable( &h_gauss );
+    h_gauss.user.transformBlurTable( &h_gauss );
+}
+
+__host__
 void GaussInfo::clearTables( )
 {
     inc         .clearTables();
@@ -296,6 +315,7 @@ void GaussInfo::clearTables( )
     abs_o0      .clearTables();
     abs_oN      .clearTables();
     dd          .clearTables();
+    user        .clearTables();
 }
 
 __host__

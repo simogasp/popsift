@@ -14,22 +14,15 @@ namespace popsift {
 namespace gauss {
 namespace relativeSource {
 
-__global__
-void horiz( cudaTextureObject_t src_linear_tex,
-            cudaSurfaceObject_t dst_data,
-            int                 dst_w,
-            int                 dst_h,
-            int                 octave,
-            float               shift )
+__device__ inline
+void horiz_sub( cudaTextureObject_t src_linear_tex,
+                cudaSurfaceObject_t dst_data,
+                int                 dst_w,
+                int                 dst_h,
+                const int           span,
+                const float*        filter,
+                float               shift )
 {
-    // The first line creates level-0 octave-0 for the input image only.
-    // Since we are computing the direct-downscaling gauss filter tables
-    // and the first entry in that table is identical to the "normal"
-    // table, we do not need a special case.
-    // horiz( src_linear_tex, dst_data, shift, d_gauss.inc.span[0], &d_gauss.inc.filter[0*GAUSS_ALIGN] );
-
-    const int    span   =  d_gauss.dd.span[octave];
-    const float* filter = &d_gauss.dd.filter[octave*GAUSS_ALIGN];
     const float  read_y = ( blockIdx.y + shift ) / dst_h;
 
     const int off_x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -56,6 +49,52 @@ void horiz( cudaTextureObject_t src_linear_tex,
 
     surf2Dwrite( out * 255.0f, dst_data, off_x*4, blockIdx.y, cudaBoundaryModeZero );
 }
+
+__global__
+void horiz( cudaTextureObject_t src_linear_tex,
+            cudaSurfaceObject_t dst_data,
+            int                 dst_w,
+            int                 dst_h,
+            int                 octave,
+            float               shift )
+{
+    // The first level Gauss filter in dd creates level-0 octave-0 for the input image only.
+    // Since we are computing the direct-downscaling gauss filter tables
+    // and the first entry in that table is identical to the "normal"
+    // table, we do not need a special case.
+    // horiz( src_linear_tex, dst_data, shift, d_gauss.inc.span[0], &d_gauss.inc.filter[0*GAUSS_ALIGN] );
+
+    const int    span   =  d_gauss.dd.span[octave];
+    const float* filter = &d_gauss.dd.filter[octave*GAUSS_ALIGN];
+
+    horiz_sub( src_linear_tex,
+               dst_data,
+               dst_w,
+               dst_h,
+               span,
+               filter,
+               shift );
+}
+
+__global__
+void horiz_with_user_gauss_table( cudaTextureObject_t src_linear_tex,
+                                  cudaSurfaceObject_t dst_data,
+                                  int                 dst_w,
+                                  int                 dst_h,
+                                  float               shift )
+{
+    const int    span   =  d_gauss.user.span[0];
+    const float* filter = &d_gauss.user.filter[0];
+
+    horiz_sub( src_linear_tex,
+               dst_data,
+               dst_w,
+               dst_h,
+               span,
+               filter,
+               shift );
+}
+
 
 } // namespace relativeSource
 } // namespace gauss
